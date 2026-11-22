@@ -276,10 +276,31 @@ textarea.m-field { min-height: 104px; resize: vertical; }
   #navigation .nav__overlay-top .m-text-4 { color: var(--color-3); }
   #navigation .nav__close { color: var(--color-3); }
   #navigation .nav__links { align-self: center; display: grid; gap: .1em; padding: 32px 0; }
-  #navigation .nav__links a { font-size: clamp(44px, 8vw, 104px); color: var(--color-1); text-decoration: none; width: fit-content; }
+  #navigation .nav__links a { font-size: clamp(40px, min(8vw, 11vh), 104px); color: var(--color-1); text-decoration: none; width: fit-content; }
   #navigation .nav__links a span { display: inline-block; transition: transform .45s cubic-bezier(.3, .7, .2, 1); }
   #navigation .nav__links a:focus-visible { outline-color: var(--color-3); }
   @media (hover: hover) { #navigation .nav__links a:hover span { transform: translateY(-.08em) rotate(-2deg); } }
+  #navigation .nav__links a[data-tree-on] span { transform: translateY(-.08em) rotate(-2deg); }
+  #navigation .nav__tree { position: fixed; inset: 0; z-index: 2; pointer-events: none; }
+  #navigation .nav__tree-lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  #navigation .nav__tree-lines path { fill: none; stroke: var(--color-3); stroke-width: 2; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; }
+  #navigation .nav__tree-lines circle { fill: var(--color-2); stroke: var(--color-3); stroke-width: 2; }
+  #navigation .nav__tree[data-on] .nav__tree-lines path { animation: nav-tree-draw .5s cubic-bezier(.3, .7, .2, 1) forwards; animation-delay: calc(var(--i) * 45ms); }
+  @keyframes nav-tree-draw { to { stroke-dashoffset: 0; } }
+  @keyframes nav-tree-pop { from { opacity: 0; transform: translateX(-14px) scale(.96); } to { opacity: 1; transform: none; } }
+  #navigation .nav__node { position: absolute; display: flex; align-items: center; gap: 12px; width: var(--node-w, 300px); padding: 10px 14px 10px 10px; background: #fff; color: var(--color-4); border: 1.5px solid var(--color-4); border-radius: 14px; box-shadow: 0 8px 22px rgba(13, 13, 13, .10); text-decoration: none; pointer-events: auto; opacity: 0; transition: border-color .25s, box-shadow .25s; }
+  #navigation .nav__tree[data-on] .nav__node { animation: nav-tree-pop .45s cubic-bezier(.2, .85, .2, 1) forwards; animation-delay: calc(var(--i) * 45ms + 120ms); }
+  #navigation .nav__node::before, #navigation .nav__node::after { content: ""; position: absolute; top: 50%; width: 9px; height: 9px; margin-top: -5px; border-radius: 50%; background: var(--color-2); border: 1.5px solid var(--color-4); }
+  #navigation .nav__node::before { left: -6px; }
+  #navigation .nav__node::after { right: -6px; }
+  #navigation .nav__node-ico { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--color-1); color: #fff; font: 800 14px/1 var(--font-1); font-stretch: 75%; letter-spacing: .02em; text-transform: uppercase; }
+  #navigation .nav__node-title { display: block; font: 700 14px/1.2 var(--font-3); font-stretch: 115%; letter-spacing: .02em; text-transform: uppercase; }
+  #navigation .nav__node-sub { display: block; margin-top: 3px; font: 400 12px/1.3 var(--font-3); font-stretch: 115%; color: #5d5a53; }
+  @media (hover: hover) { #navigation .nav__node:hover { border-color: var(--color-1); box-shadow: 0 10px 26px rgba(227, 6, 19, .22); } }
+  @media (prefers-reduced-motion: reduce) {
+    #navigation .nav__tree[data-on] .nav__tree-lines path { animation: none; stroke-dashoffset: 0; }
+    #navigation .nav__tree[data-on] .nav__node { animation: none; opacity: 1; }
+  }
   #navigation .nav__overlay-foot { display: flex; flex-wrap: wrap; gap: 12px 32px; color: var(--color-3); }
   @media (max-width: 760px) {
     #navigation .nav__bar { padding: 14px var(--space-1); }
@@ -1179,7 +1200,7 @@ html.ld-hold #opening .opening__line-in, html.ld-hold #opening .opening__pill-in
 })();
 </script>
 
-<!-- navigation: an Instagram round button, the name AceDenide and a round menu button; a full-screen menu with six links, email and phone -->
+<!-- navigation: an Instagram round button, the name AceDenide and a round menu button; a full-screen menu with seven links; hovering a link opens a node tree of its content -->
 <header id="navigation" data-8b-section="navigation">
   <div class="nav__bar">
     <a class="nav__logo" href="#opening" aria-label="AceDenide, back to the top">
@@ -1209,6 +1230,7 @@ html.ld-hold #opening .opening__line-in, html.ld-hold #opening .opening__pill-in
       <a class="m-text-2" href="#people"><span>The team</span></a>
       <a class="m-text-2" href="#nights"><span>Services</span></a>
       <a class="m-text-2" href="#corner"><span>Our wins</span></a>
+      <a class="m-text-2" href="#faq"><span>FAQ</span></a>
       <a class="m-text-2" href="#contact"><span>Start a project</span></a>
     </nav>
     <div class="nav__overlay-foot"></div>
@@ -1664,6 +1686,121 @@ html.ld-hold #opening .opening__line-in, html.ld-hold #opening .opening__pill-in
   closeButton.addEventListener('click', () => close(true));
   overlay.addEventListener('keydown', event => { if (event.key === 'Escape') close(true); });
   overlay.querySelectorAll('a[href^="#"]').forEach(link => link.addEventListener('click', () => close(false)));
+
+  /* Node tree: hovering (or focusing) a menu link fans its content out like workflow nodes. Click still jumps to the section. */
+  const TREES = {
+    pies: { w: 310, items: [
+      ['Cyron', 'Cybersecurity · by Ajmal Haroon'], ['AI Log Monitor', 'AI · DevOps · by AceDenide Team'],
+      ['Hand Sign SOS', 'Safety app · by Hariharan'], ['Suit Store', 'E-commerce · by Hariharan'],
+      ['KaamKart', 'Web app · by Hariharan'], ['Course Registry', 'Web app · by Ajai'], ['Money Split', 'Web app · by Hariharan'] ] },
+    dough: { w: 330, items: [
+      ['Listen', 'Your goals, your users, what has not worked', '1'], ['Plan', 'Scope, structure and a clear timeline', '2'],
+      ['Design', 'Simple screens you can react to early', '3'], ['Build', 'Clean code, tested as we go', '4'], ['Launch', 'We ship it and stay close', '5'] ] },
+    people: { w: 340, items: [
+      ['Ajmal Haroon', 'Team Leader · Cybersecurity · Python'], ['Hariharan', 'Assistant Team Lead · MERN · UI/UX · DevOps'],
+      ['Ajai', 'Backend Developer · Java · Spring Boot'], ['Arshad Ahmed', 'ML Model Trainer · Developer · Tester'] ] },
+    nights: { w: 320, items: [
+      ['Websites', 'Frontend · fast, responsive sites', 'W'], ['Web & mobile apps', 'Full stack · a back end that holds up', 'A'], ['UI design', 'Design · clear layouts, simple systems', 'UI'] ] },
+    corner: { w: 330, items: [
+      ['Swap 2026', 'Jamal Mohamed College, Tiruchirappalli', 'SW'], ['Mr. Swap trophy', 'Hariharan', 'MS'], ['Overall Swap trophy', 'Team AceDenide', 'OS'] ] },
+    faq: { w: 320, items: [
+      ['How do we start?', '', '1'], ['What do you build?', '', '2'], ['How long does a project take?', '', '3'],
+      ['Can you improve what I already have?', '', '4'], ['Do you help after launch?', '', '5'] ] },
+    contact: { w: 290, items: [
+      ['Start a project', 'Share your idea', '1'], ['Get a quote', 'Tell us your budget', '2'], ['Ask a question', 'We will get back to you', '3'], ['Just say hello', 'No project needed', '4'] ] }
+  };
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  const canHover = matchMedia('(hover: hover) and (min-width: 900px)');
+  const links = [...overlay.querySelectorAll('.nav__links a')];
+  const tree = document.createElement('div');
+  tree.className = 'nav__tree';
+  tree.setAttribute('aria-hidden', 'true');
+  overlay.appendChild(tree);
+  let current = null, hideTimer = 0;
+  const initials = text => text.split(/\s+/).map(word => word[0]).join('').slice(0, 2);
+  const el = (tag, cls, text) => { const node = document.createElement(tag); if (cls) node.className = cls; if (text) node.textContent = text; return node; };
+
+  function hideTree(now) {
+    clearTimeout(hideTimer);
+    const go = () => { tree.removeAttribute('data-on'); tree.textContent = ''; links.forEach(l => l.removeAttribute('data-tree-on')); current = null; };
+    if (now) go(); else hideTimer = setTimeout(go, 450);
+  }
+  function showTree(link) {
+    clearTimeout(hideTimer);
+    if (overlay.hidden || !canHover.matches) return;
+    if (current === link) return;
+    const id = (link.getAttribute('href') || '').slice(1);
+    const data = TREES[id];
+    if (!data) { hideTree(true); return; }
+    hideTree(true);
+    current = link;
+    link.setAttribute('data-tree-on', '');
+    const box = link.getBoundingClientRect();
+    const rootX = box.right + 8, rootY = box.top + box.height / 2;
+    const widest = Math.max(...links.map(l => l.getBoundingClientRect().right));
+    const nodeX = Math.max(rootX, widest) + 96;
+    const width = Math.min(data.w, innerWidth - nodeX - 28);
+    if (width < 210) { hideTree(true); return; }
+
+    const svg = document.createElementNS(SVGNS, 'svg');
+    svg.setAttribute('class', 'nav__tree-lines');
+    svg.setAttribute('viewBox', '0 0 ' + innerWidth + ' ' + innerHeight);
+    tree.appendChild(svg);
+    const nodes = data.items.map(([title, sub, ico], i) => {
+      const node = el('a', 'nav__node');
+      node.href = '#' + id;
+      node.tabIndex = -1;
+      node.style.setProperty('--i', i);
+      node.style.setProperty('--node-w', width + 'px');
+      node.append(el('span', 'nav__node-ico', ico || initials(title)));
+      const body = el('span');
+      body.append(el('span', 'nav__node-title', title));
+      if (sub) body.append(el('span', 'nav__node-sub', sub));
+      node.append(body);
+      tree.appendChild(node);
+      return node;
+    });
+    const heights = nodes.map(node => node.offsetHeight);
+    const sum = heights.reduce((a, b) => a + b, 0);
+    const room = innerHeight - 110;
+    const gap = nodes.length > 1 ? Math.max(4, Math.min(12, (room - sum) / (nodes.length - 1))) : 0;
+    const total = sum + gap * (nodes.length - 1);
+    let y = Math.max(78, Math.min(rootY - total / 2, innerHeight - total - 20));
+    const dx = (nodeX - rootX) * .55;
+    nodes.forEach((node, i) => {
+      node.style.left = nodeX + 'px';
+      node.style.top = y + 'px';
+      const midY = y + heights[i] / 2;
+      const path = document.createElementNS(SVGNS, 'path');
+      path.setAttribute('d', `M${rootX} ${rootY} C${rootX + dx} ${rootY} ${nodeX - dx} ${midY} ${nodeX - 1} ${midY}`);
+      path.setAttribute('pathLength', '1');
+      path.style.setProperty('--i', i);
+      svg.appendChild(path);
+      y += heights[i] + gap;
+    });
+    const dot = document.createElementNS(SVGNS, 'circle');
+    dot.setAttribute('cx', rootX); dot.setAttribute('cy', rootY); dot.setAttribute('r', 5);
+    svg.appendChild(dot);
+    void tree.offsetWidth;
+    tree.setAttribute('data-on', '');
+  }
+  links.forEach(link => {
+    link.addEventListener('mouseenter', () => showTree(link));
+    link.addEventListener('focus', () => showTree(link));
+    link.addEventListener('mouseleave', () => hideTree());
+    link.addEventListener('blur', () => hideTree());
+  });
+  tree.addEventListener('mouseover', event => { if (event.target.closest('.nav__node')) clearTimeout(hideTimer); });
+  tree.addEventListener('mouseout', event => {
+    const to = event.relatedTarget;
+    if (event.target.closest('.nav__node') && !(to && to.closest && (to.closest('.nav__node') || to.closest('.nav__links a')))) hideTree();
+  });
+  tree.addEventListener('click', event => { if (event.target.closest('.nav__node')) { hideTree(true); close(false); } });
+  closeButton.addEventListener('click', () => hideTree(true));
+  menuButton.addEventListener('click', () => hideTree(true));
+  overlay.addEventListener('keydown', event => { if (event.key === 'Escape') hideTree(true); });
+  overlay.addEventListener('scroll', () => hideTree(true), { passive: true });
+  addEventListener('resize', () => hideTree(true));
 })();
 </script>
 <script data-8b-part="section-script:opening">
