@@ -4,7 +4,7 @@ Website of **AceDenide**, a small web and app studio. *From failures, we forge s
 
 Team: Hariharan, Ajmal Haroon, Ajai, Arshad Ahmed.
 
-Live site: https://<your-vercel-url>
+Live site: https://acedenide.vercel.app/
 
 ## Licence
 
